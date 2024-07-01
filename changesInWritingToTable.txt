@@ -398,4 +398,5 @@ End Sub
 Sub testingTable()
     WriteInTable EmpleadosSheet, "Informacion_General"
 End Sub
+'ID_Empleado	Nombre Completo	Puesto	Area	Turno	Supervisor	Fecha de nacimiento	Edad	Genero	Nacionalidad	Numero de telefono	Tipo de transporte que usa	Numero de DUI	Fecha de Expedicion	Fecha de Vencimiento	Direccion Actual	Nombre del Padre	Expedido en Municipio	Expedido en Departamento	Profecion según DUI	Estado Familiar según DUI	Nombre de la Madre	Nombre del Conyuge	Fecha de nacimiento conyuge	Edad Conyuge	Genero Conyuge
 
