@@ -1,0 +1,401 @@
+Option Explicit
+
+Dim EmployeeRow As Long, EmployeeCol As Long
+
+    
+Sub CleanInputs()
+    CleanCell "G12,G14,G16,G18,G20,G22,L12,L14,L16,L18,L20,G24,L24,G27,G29,G31,G33,G35,L27,L29,L31,L33,L35,G41,G43,G45,G47,I41,I43,I45,I47,L41,L43,L45,L47,O41,O43,O45,O47,G51,L51,O51,Q51,E55,E56,E57,E58,E59,E60,H55,H56,H57,H58,H59,H60,F63,J63,N63,E69,H69,J69,L69,E70,H70,J70,L70,E71,H71,J71,L71,E72,H72,J72,L72,E73,H73,J73,L73,E74,H74,J74,L74,J55,J56,J57,J58,J59,J60,K55,K56,K57,K58,K59,K60", ThisWorkbook.Sheets("Formulario")
+End Sub
+
+Sub CleanCell(addresses As String, Sheet As Worksheet)
+    Dim addrArray() As String
+    Dim cellAddr As Variant
+    Dim cell As Range
+    Dim combinedRange As Range
+    
+    addrArray = Split(addresses, ",")
+    
+    For Each cellAddr In addrArray
+        Set cell = Sheet.Range(cellAddr)
+        If cell.MergeCells Then
+            cell.MergeArea.ClearContents
+        Else
+            cell.ClearContents
+        End If
+    Next cellAddr
+End Sub
+
+
+
+Sub LoadEmployee()
+    Dim rngTable As ListObject
+    Dim searchID As String
+    Dim searchColumn As String
+    Dim foundCell As Range
+    Dim birthDate As Date
+
+    
+    Set rngTable = Datos.ListObjects("TABLA_DB")
+    
+    'Celda de busqueda ID
+    searchID = Formulario.Range("G5").Value
+    
+    'Celda de busqueda columna
+    searchColumn = Formulario.Range("K5").Value
+    
+    On Error Resume Next
+    
+    'busca en la tabla ID exacto
+    Set foundCell = rngTable.ListColumns(searchColumn).DataBodyRange.Find(what:=searchID, LookIn:=xlValues, LookAt:=xlWhole)
+    
+    Debug.Print Datos.Cells(foundCell.Row, 1).Value
+    
+    
+    ' Si se encuentra el ID, llenar el formulario
+    If Not foundCell Is Nothing Then
+        
+        Formulario.Range("G14").Value = Datos.Cells(foundCell.Row, 3).Value & " " & Datos.Cells(foundCell.Row, 4).Value & " " & Datos.Cells(foundCell.Row, 5).Value
+        Formulario.Range("G16").Value = Datos.Cells(foundCell.Row, 6).Value 'puesto
+        Formulario.Range("G18").Value = Datos.Cells(foundCell.Row, 8).Value 'area
+        Formulario.Range("G20").Value = Datos.Cells(foundCell.Row, 7).Value 'turno
+        
+        
+        Dim year As Integer
+        Dim month As Integer
+        Dim day As Integer
+    
+        
+        year = CInt(Left(Datos.Cells(foundCell.Row, 10).Value, 4))
+        month = CInt(Mid(Datos.Cells(foundCell.Row, 10).Value, 5, 2))
+        day = CInt(Right(Datos.Cells(foundCell.Row, 10).Value, 2))
+        
+        'forma la fecha en un formato que el lenguaje entiende
+        birthDate = DateSerial(year, month, day)
+        
+        
+        Formulario.Range("L12").Value = birthDate 'fecha de nacimiento
+        Formulario.Range("L14").Value = DateDiff("yyyy", birthDate, Date) 'edad
+        
+        'IFF equivalente a operador ternario
+        Formulario.Range("L16").Value = IIf(Datos.Cells(foundCell.Row, 11).Value = "M", "Masculino", "Femenino") ' genero
+        
+        
+    Else
+        MsgBox "No se encontraron coincidencias.", vbExclamation
+    End If
+    On Error GoTo 0
+    
+End Sub
+
+Sub CheckInputsFilled()
+    ' Define el rango de celdas a buscar para validar
+    Dim allFilled As Boolean
+    allFilled = AreAllInputsFilled()
+       
+    If Not allFilled Then
+        MsgBox "Todos los campos de informacion general y DUI son obligatorios.", vbExclamation, "Campos Incompletos"
+    Else
+        MsgBox "Todos los campos han sido completados.", vbInformation, "Campos completos"
+    End If
+End Sub
+
+Function AreAllInputsFilled() As Boolean
+    Dim cellsToCheck As Range
+    Set cellsToCheck = Union(Range("G12"), Range("G14"), Range("G16"), Range("G18"), Range("G20"), _
+                             Range("L12"), Range("L14"), Range("L16"), Range("L18"), Range("L20"), Range("L22"), _
+                             Range("G27"), Range("G29"), Range("G31"), Range("G33"), Range("G35"), _
+                             Range("L27"), Range("L29"), Range("L31"), Range("L33"), Range("L35"))
+    
+    Dim cell As Range
+    Dim allFilled As Boolean
+    allFilled = True
+    
+    ' Itera sobre cada celda para encontrar una vacia
+    For Each cell In cellsToCheck
+        If IsEmpty(cell.Value) Then
+            allFilled = False
+            Exit For ' Termina Loop
+        End If
+    Next cell
+    AreAllInputsFilled = allFilled
+End Function
+
+Function isCellEmpty(cell As Range) As Boolean
+    IsEmpty (cell.Value)
+    isCellEmpty = IsEmpty
+End Function
+
+
+Sub EmployeeSaveUpdate()
+    Dim inputs As Variant
+    Dim index As Long
+    Dim i As Long
+
+
+    ' Definir los rangos
+    Dim rngInputs As Range
+    Dim rngInputsDUI As Range
+    Dim rngInputsEducation As Range
+    Dim rngInputsFamilyInfo As Range
+    Dim rngInputsFamilyInfoAge As Range
+    Dim rngInputsFamilyInfoGender As Range
+    Dim rngInputsBenefactors As Range
+    
+    Dim rngResultCells As Range
+    Dim rngResultCellsDUI As Range
+    Dim rngResultCellsEducation As Range
+    Dim rngResultCellsFamilyInfo As Range
+    Dim rngResultCellsFamilyInfoAge As Range
+    Dim rngResultCellsFamilyInfoGender As Range
+    Dim rngResultCellsBenefactors As Range
+    
+
+    ' Asignar los rangos
+    'GetUnionRange(celdas,Hoja)
+    Set rngInputs = GetUnionRange("G12,G14,G16,G18,G20,G22,L12,L14,L16,L18,L20,L22,G24,L24", Formulario)
+    Set rngInputsDUI = GetUnionRange("G27,G29,G31,G33,G35,L27,L29,L31,L33,L35", Formulario)
+    Set rngInputsEducation = GetUnionRange("G41,G43,G45,G47,I41,I43,I45,I47,L41,L43,L45,L47,O41,O43,O45,O47", Formulario)
+    Set rngInputsFamilyInfo = GetUnionRange("G51,L51,O51,Q51,E55,E56,E57,E58,E59,E60,H55,H56,H57,H58,H59,H60,F63,J63,N63", Formulario)
+    
+    Set rngInputsBenefactors = GetUnionRange("E69,H69,J69,L69,E70,H70,J70,L70,E71,H71,J71,L71,E72,H72,J72,L72,E73,H73,J73,L73,E74,H74,J74,L74", Formulario)
+    Set rngInputsFamilyInfoAge = GetUnionRange("J55,J56,J57,J58,J59,J60", Formulario)
+    Set rngInputsFamilyInfoGender = GetUnionRange("K55,K56,K57,K58,K59,K60", Formulario)
+                                        
+    Set rngResultCells = GetUnionRange("AH5,H9,H10,H11,H12,H13,AE9,AE10,AE11,AE12,AE13,AE14,H17,AE17", PLANTILLA) '13
+    Set rngResultCellsDUI = GetUnionRange("H20,H21,H22,H23,H25,AC20,AC21,AC22,AC23,AC25", PLANTILLA) '10
+    Set rngResultCellsEducation = GetUnionRange("H30,H31,H32,H33,L30,L31,L32,L33,X30,X31,X32,X33,AJ30,AJ31,AJ32,AJ33", PLANTILLA) '16
+    Set rngResultCellsFamilyInfo = GetUnionRange("B38,X38,AD38,AJ38,B41,B42,B43,B44,B45,B46,X41,X42,X43,X44,X45,X46,F49,W49,AJ49", PLANTILLA) '28
+    Set rngResultCellsFamilyInfoAge = GetUnionRange("AD41,AD42,AD43,AD44,AD45,AD46", PLANTILLA)
+    Set rngResultCellsFamilyInfoGender = GetUnionRange("AJ41,AJ42,AJ43,AJ44,AJ45,AJ46", PLANTILLA)
+    
+    
+    Set rngResultCellsBenefactors = GetUnionRange("B54,X54,AD54,AJ54,B55,X55,AD55,AJ55,B56,X56,AD56,AJ56,B57,X57,AD57,AJ57,B58,X58,AD58,AJ58,B59,X59,AD59,AJ59", PLANTILLA) '24
+    
+    ' Crear un array para almacenar los valores (longitud del array)
+    ReDim inputs(1 To rngInputs.count + rngInputsDUI.count + rngInputsEducation.count + rngInputsFamilyInfo.count + rngInputsFamilyInfoAge.count + rngInputsFamilyInfoGender.count + rngInputsBenefactors.count)
+    'ReDim inputs(1 To rngInputsBenefactors.Count)
+    index = 1
+
+    ' Llena el array con los valores de los rangos y almacena el tamaño en index
+    index = FillArrayFromRange(inputs, index, rngInputs) '11
+    index = FillArrayFromRange(inputs, index, rngInputsDUI) '21
+    index = FillArrayFromRange(inputs, index, rngInputsEducation)
+    index = FillArrayFromRange(inputs, index, rngInputsFamilyInfo)
+    index = FillArrayFromRange(inputs, index, rngInputsFamilyInfoAge)
+    index = FillArrayFromRange(inputs, index, rngInputsFamilyInfoGender)
+    index = FillArrayFromRange(inputs, index, rngInputsBenefactors)
+
+    ' Imprimir los valores del array
+    For i = LBound(inputs) To UBound(inputs)
+        Debug.Print inputs(i)
+    Next i
+
+    ' Asignar valores a los rangos de resultado
+    index = 1
+    index = AssignValuesToRange(rngResultCells, inputs, index)
+    index = AssignValuesToRange(rngResultCellsDUI, inputs, index)
+    index = AssignValuesToRange(rngResultCellsEducation, inputs, index)
+    index = AssignValuesToRange(rngResultCellsFamilyInfo, inputs, index)
+    index = AssignValuesToRange(rngResultCellsFamilyInfoAge, inputs, index)
+    index = AssignValuesToRange(rngResultCellsFamilyInfoGender, inputs, index)
+    index = AssignValuesToRange(rngResultCellsBenefactors, inputs, index)
+    
+End Sub
+
+
+Function GetUnionRange(addresses As String, Sheet As Worksheet) As Range
+    Dim addrArray() As String
+    Dim cellAddr As Variant
+    Dim combinedRange As Range
+    
+    'divide por comas las celdas
+    addrArray = Split(addresses, ",")
+    
+    For Each cellAddr In addrArray
+        If combinedRange Is Nothing Then
+            Set combinedRange = Sheet.Range(cellAddr)
+        Else
+            Set combinedRange = Union(combinedRange, Sheet.Range(cellAddr))
+        End If
+    Next cellAddr
+
+    Set GetUnionRange = combinedRange
+End Function
+
+'almacena valores de celdas por index
+Function FillArrayFromRange(ByRef arr As Variant, startIndex As Long, rng As Range) As Long
+    Dim cell As Range
+
+    For Each cell In rng
+        arr(startIndex) = cell.Value
+        startIndex = startIndex + 1
+    Next cell
+
+    FillArrayFromRange = startIndex
+End Function
+'escribe el valor almacenado en las celdas, siguiendo el orden del index
+Function AssignValuesToRange(rng As Range, ByRef arr As Variant, startIndex As Long) As Long
+    Dim cell As Range
+
+    For Each cell In rng
+        cell.Value = arr(startIndex)
+        startIndex = startIndex + 1
+    Next cell
+
+    AssignValuesToRange = startIndex
+End Function
+
+
+
+
+
+
+Sub BuscarEnTabla()
+Dim tabla As Range ' Definir el rango de la tabla
+Dim valorABuscar As String ' Valor ingresado por el usuario
+Dim columnaBusqueda As Integer ' Columna seleccionada en la lista desplegable
+Dim celdaEncontrada As Range ' Celda donde se encuentra la coincidencia
+Dim valorResultado As String ' Valor del resultado que se busca
+
+' Obtener el valor ingresado por el usuario
+valorABuscar = InputBox("Ingrese el valor a buscar:")
+
+' Obtener la columna seleccionada en la lista desplegable
+columnaBusqueda = Range("ListaDesplegable").Value
+
+' Establecer el rango de búsqueda en función de la columna seleccionada
+Select Case columnaBusqueda
+    Case 1
+        Set tabla = Range("ColumnaA:ColumnaA") ' Buscar en la columna A
+    Case 2
+        Set tabla = Range("ColumnaB:ColumnaB") ' Buscar en la columna B
+    ' ... agregar casos para otras columnas
+End Select
+
+' Realizar la búsqueda utilizando el método Range.Find
+Set celdaEncontrada = tabla.Find(what:=valorABuscar, LookIn:=xlValues, _
+                                  LookAt:=xlWholeWord, SearchOrder:=xlByRows, _
+                                  MatchCase:=xlNonSensitive)
+
+If Not celdaEncontrada Is Nothing Then
+    valorResultado = celdaEncontrada.Value
+    MsgBox "El valor encontrado para " & valorABuscar & " en la columna " & columnaBusqueda & " es: " & valorResultado
+Else
+    MsgBox "El valor no se encontró en la tabla."
+End If
+End Sub
+
+Sub getValues()
+Dim col As Collection
+
+Set col = New Collection
+
+col.Add "Uno", "key1"
+col.Add "Dos", "key2"
+
+Dim i As Long
+For i = 1 To 2
+    Debug.Print (col.Item("key" & i))
+Next i
+
+End Sub
+
+Function GetInfoFromForm(Form As Object, InputTag As String) As Variant
+    Dim ctrl As Control
+    Dim inputValues() As Variant
+    Dim index As Long
+    
+    ' Contar la cantidad de controles con la etiqueta "Input"
+    Dim count As Long
+    For Each ctrl In Form.Controls
+        If ctrl.Tag = InputTag Then
+            count = count + 1
+        End If
+    Next ctrl
+    
+    ' Redimensionar el array inputValues según la cantidad de controles encontrados
+    ReDim inputValues(1 To count)
+    
+    ' Volver a inicializar el índice
+    index = 1
+    
+    ' Recorrer nuevamente los controles y almacenar sus valores en el array
+    For Each ctrl In Form.Controls
+        If ctrl.Tag = InputTag Then
+            inputValues(index) = ctrl.Value
+            Debug.Print ctrl.Name
+            index = index + 1
+        End If
+    Next ctrl
+    
+    GetInfoFromForm = inputValues
+End Function
+
+Sub FormTest()
+    Dim values() As Variant
+    values = GetInfoFromForm(Data_UI, "Input")
+    
+    ' Ejemplo de cómo recorrer los valores obtenidos
+    Dim i As Long
+    For i = LBound(values) To UBound(values)
+        'Debug.Print values(i)
+    Next i
+End Sub
+
+Function GetLastUsableRowInTable(Sheet As Worksheet, TableName As String) As Long
+    Dim tb As ListObject
+    Dim tbRange As Range
+    Dim lastRow As Long
+    
+    Set tb = Sheet.ListObjects(TableName)
+    Set tbRange = tb.Range
+    
+    ' Verificar si la tabla tiene filas de datos
+    If tb.ListRows.count > 0 Then
+        ' Encontrar la última fila con datos en la tabla
+        lastRow = tb.ListRows(tb.ListRows.count).Range.Row
+    Else
+        ' Si la tabla está vacía, seleccionar la primera fila después de los encabezados
+        lastRow = tb.HeaderRowRange.Row + 1
+    End If
+    
+    ' retornar ultima fila
+    GetLastUsableRowInTable = lastRow
+End Function
+
+Function GetTableColumnCount(Sheet As Worksheet, TableName As String) As Long
+    Dim tb As ListObject
+    Set tb = Sheet.ListObjects(TableName)
+    GetTableColumnCount = tb.Range.Columns.count
+End Function
+Function getLastId(Sheet As Worksheet, Row As Long)
+    getLastId = Sheet.Cells(Row, 1).Value
+End Function
+
+Sub WriteInTable(Sheet As Worksheet, TableName As String)
+
+    Dim lastRow As Long
+    Dim i As Long
+    Dim columnCount As Long
+    Dim valuesFromForm As Variant
+    
+    valuesFromForm = GetInfoFromForm(Data_UI, "Input")
+    
+    lastRow = GetLastUsableRowInTable(Sheet, TableName)
+    Debug.Print lastRow
+    columnCount = GetTableColumnCount(Sheet, TableName)
+    Debug.Print getLastId(Sheet, lastRow)
+    
+    For i = LBound(valuesFromForm) To UBound(valuesFromForm)
+        'Debug.Print Sheet.Cells(lastRow, i).Value
+        Debug.Print valuesFromForm(i)
+        Sheet.Cells(lastRow, i).Value
+    Next i
+    Debug.Print "Última fila seleccionada: " & lastRow
+
+End Sub
+
+Sub testingTable()
+    WriteInTable EmpleadosSheet, "Informacion_General"
+End Sub
+
